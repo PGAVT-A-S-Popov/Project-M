@@ -65,10 +65,20 @@ main:
 	call puts
 	
 	hlt
-.floppy_error
+;
+;Error handling
+;
+floppy_error:
+	mov si, msg_read_failed
+	call puts
+	jmp wait_key_and_reboot
+wait_key_and_reboot:
+	mov ah,0
+	int 16h ; wait for keypress 
+	jmp 0FFFFh:0 ; jump to beginning of BIOS  to restart it 
+.halt:
+	cli	;disable interrupts, so we don't get out of halt state
 	hlt
-.halt
-	jmp .halt
 ;
 ; Disk routines
 ;
@@ -104,6 +114,12 @@ lba_to_chs:
 ;	Reads sectors from a disk
 ;
 disk_read:
+	push ax	;save registers we will modify
+	push bx
+	push cx
+	push dx
+	push di
+
 	push cx ;temp save CL(number of sectors to read)
 	call lba_to_chs
 	pop ax 
@@ -125,6 +141,13 @@ disk_read:
 	jmp floppy_error
 .done
 	popa
+	push di	
+	push dx
+	push cx
+	push bx
+	push ax ;restore registers we will modified
+	ret
+
 msg_hello: db 'Hello world!',ENDL,0
 msg_read_failed: db 'Reading from disk failed',ENDL,0
 times 510-($-$$) db 0
